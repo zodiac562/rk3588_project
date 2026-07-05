@@ -1,0 +1,8 @@
+# 盲文打印系统依赖
+# 运行平台: RK3588 + 嵌入式 Linux + Python 3.x
+
+pyserial>=3.5
+pypinyin>=0.49.0
+PyYAML>=6.0
+paho-mqtt>=1.6.0
+gpiod>=2.0.0
