@@ -1,0 +1,133 @@
+# 盲文打印系统全局配置
+# 所有路径均相对于项目根目录 type_writer/
+
+# ── UART 串口 ──────────────────────────────────────────────
+uart:
+  ports:
+    y1: "/dev/ttyS8"        # Y 轴电机 1（原 X1）
+    y2: "/dev/ttyS9"        # Y 轴电机 2（原 X2）
+    x:  "/dev/ttyS3"        # X 轴电机（原 Y）
+  baudrate: 115200
+  timeout: 1.0              # 秒
+
+# ── 电机参数 ───────────────────────────────────────────────
+motor:
+  addresses:
+    y1: 0x01    # 串联控制，所有电机地址均为 0x01，通过串口名称区分
+    y2: 0x01
+    x:  0x01
+  delay_time: 0.01          # UART 指令安全间隔（秒）
+  accel: 100                # 默认加速度
+  speed: 2000                # 默认转速 RPM
+  pulses_per_rev: 51200     # 每圈脉冲数
+  sync_threshold: 200       # 双 X 同步偏差阈值（脉冲）
+
+# ── 电机动作时间配置（单位：秒）──────────────────────────────
+motor_timing:
+  parse_time: 0.01           # 解析时间：所有动作类型固定 0.01 秒
+  position_read_time: 0.01   # 读取当前位置所需时间
+  execute_time:              # 执行时间：初始为 0，需实际测试后填写
+    print_move: 0.3          # 打印移动执行时间（含X/Y移动+打点）
+    newline_move: 2.0        # 换行移动执行时间（回退X+前进Y）
+    home_move: 8.0           # 回零移动执行时间
+    emergency_stop: 0.5      # 急停执行时间（通常很短）
+
+# ── 电磁铁（Z 轴） ─────────────────────────────────────────
+solenoid:
+  gpio_chip: "/dev/gpiochip3"
+  gpio_line: 0             # GPIO 引脚编号
+  punch_duration_ms: 50     # 打孔脉冲时长（毫秒）
+  use_real_gpio: true      # 是否使用真实 GPIO（true=真实GPIO, false=Mock模式）
+
+# ── 盲文打印布局 ───────────────────────────────────────────
+layout:
+  dot_gap_pulse: 153600        # 盲文点间距（脉冲数）
+  grid_gap_pulse: 102400        # 格间距（脉冲数）- 字符内部格间距（声母/韵母/声调之间）
+  char_gap_pulse: 256000        # 字符间距（脉冲数）
+  line_gap_pulse: 179200      # 行间距（脉冲数）
+  dots_per_char: 6          # 每字符 6 点（2列×3行）
+  chars_per_line: 3         # 每行最大字符数
+  max_lines: 9              # 最大打印行数
+
+# ── 位置文件 ───────────────────────────────────────────────
+position:
+  dir: "."                  # 位置文件目录（相对于项目根目录）
+  files:
+    y1: "_position_y1.bin"
+    y2: "_position_y2.bin"
+    x:  "_position_x.bin"
+  print_start:               # 回零后打印起始位置（脉冲）
+    y1: 0
+    y2: 0
+    x: 0
+
+
+# ── MQTT ───────────────────────────────────────────────────
+mqtt:
+  enable: true              # 是否启用 MQTT
+  broker: "192.168.89.178"
+  port: 1883
+  client_id: "braille_printer_01"
+  keepalive: 60
+  reconnect_delay_min: 1    # 断线重连最小延迟（秒）
+  reconnect_delay_max: 30   # 断线重连最大延迟（秒）
+  topics:
+    subscribe:
+      print:  "printer/cmd/print"
+      control: "printer/cmd/control"
+      config:  "printer/cmd/config"
+    publish:
+      state:     "printer/status/state"
+      position:  "printer/status/position"
+      error:     "printer/status/error"
+      heartbeat: "printer/status/heartbeat"
+
+# ── 日志 ───────────────────────────────────────────────────
+log:
+  level: "INFO"             # DEBUG | INFO | WARNING | ERROR
+  dir: "logs"               # 日志目录（相对于项目根目录）
+  max_bytes: 5242880        # 单文件最大 5MB
+  backup_count: 3           # 保留 3 个备份
+  mqtt_level: "ERROR"       # MQTT 上报的最低日志级别
+
+# ── 看门狗 ─────────────────────────────────────────────────
+watchdog:
+  check_interval: 1.0       # 检查间隔（秒）
+  timeout: 3.0              # 心跳超时阈值（秒）
+
+# ── 盲文转换 ───────────────────────────────────────────────
+translation:
+  flip_dots: true           # 是否翻转盲文点位（纸张翻转阅读时启用）
+
+# ── OCR 配置 ────────────────────────────────────────────────
+ocr:
+  det_model_path: "/program_type/ocr/ocr_models/det_model_int8.rknn"    # 检测模型路径
+  rec_model_path: "/program_type/ocr/ocr_models/rec_v4_fp16_wide.rknn"  # 识别模型路径
+  dict_path: "/program_type/ocr/ocr_models/ppocr_keys_v1.txt"            # 字符字典路径
+  camera_id: 21                                           # 摄像头 ID
+  save_path: "/program_type/ocr/camera_capture.jpg"                         # 抓拍保存路径
+  segmentation_threshold: 0.3                               # 分割图二值化阈值
+  min_box_size: 3                                        # 最小检测框尺寸（像素）
+  polygon_expand_ratio: 1.8                               # 多边形扩张系数
+  enable_cli: false                                       # 是否启用 CLI 模拟输入
+  enable_real: true                                       # 是否启用真实 OCR（BookOCR）
+  max_chars_before_stop: 10000                             # 自动循环停止字数上限（0=不限制）
+
+# ── 翻书机配置 ────────────────────────────────────────
+page_turner:
+  delay_after_turn_ms: 2000                               # 翻书后延时（毫秒）
+  enable: false                                            # 是否启用翻书机
+  gpio_chip: "/dev/gpiochip4"                              # GPIO 芯片路径
+  gpio_line: 144                                           # GPIO 线路号
+
+# ── 硬件监听者配置 ──────────────────────────────────
+hardware_listener:
+  enable: true                                           # 是否启用硬件按钮监听
+  gpio_chip: "/dev/gpiochip3"                             # GPIO 芯片路径
+  button_start_line: 1                                   # 开始打印按钮 GPIO 线号
+  button_reject_line: 8                                  # 拒绝打印按钮 GPIO 线号
+  button_estop_line: 11                                   # 急停按钮 GPIO 线号
+  debounce_ms: 150                                        # 软件消抖时间（毫秒）
+  poll_interval_ms: 50                                    # 轮询间隔(毫秒)
+
+
